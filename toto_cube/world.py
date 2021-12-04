@@ -4,32 +4,32 @@ import toto_cube.blocks as blocks
 
 
 class World(object):
-    def __init__(self, blocks, topography=None):
+    def __init__(self, blocks, topography=None, search_position=[]):
         self.blocks = blocks
         self.topography = topography
         if self.topography is None:
-            self.topography = np.zeros((5, 5, 5), dtype=np.bool)
+            self.topography = np.zeros((5, 5, 5), dtype=np.int8)
+        self.search_position = search_position
+        self.size = 17 - np.sum(self.blocks)
 
     def is_solved(self):
         conj = True
         for x in range(5):
             for y in range(5):
-                conj &= self.topography[x][y][4]
+                conj = conj and self.topography[x, y, 4]
         return conj
 
     def new_topography(self, block):
         if (
-            self.coord["x"] + block[0] > 5
-            or self.coord["y"] + block[1] > 5
-            or self.coord["z"] + block[2] > 5
+            self.coord[0] + block[0] > 5
+            or self.coord[1] + block[1] > 5
+            or self.coord[2] + block[2] > 5
         ):
             return None
 
         for x in range(block[0]):
             for y in range(block[1]):
-                if self.topography[
-                    self.coord["x"] + x, self.coord["y"] + y, self.coord["z"]
-                ]:
+                if self.topography[self.coord[0] + x, self.coord[1] + y, self.coord[2]]:
                     return None
 
         new_topography = np.array(self.topography)
@@ -37,22 +37,22 @@ class World(object):
             for y in range(block[1]):
                 for z in range(block[2]):
                     new_topography[
-                        self.coord["x"] + x, self.coord["y"] + y, self.coord["z"] + z
-                    ] = True
+                        self.coord[0] + x, self.coord[1] + y, self.coord[2] + z
+                    ] = (self.size + 1)
         return new_topography
 
     def next_worlds(self):
         self.coord = None
-        coord = {"x": 0, "y": 0, "z": 0}
-        while coord["z"] < 5:
-            if not self.topography[coord["x"]][coord["y"]][coord["z"]]:
+        coord = [0, 0, 0]
+        while coord[2] < 5:
+            if not self.topography[coord[0], coord[1], coord[2]]:
                 self.coord = coord
                 break
-            coord["x"] += 1
-            coord["y"] += coord["x"] // 5
-            coord["z"] += coord["y"] // 5
-            coord["x"] = coord["x"] % 5
-            coord["y"] = coord["y"] % 5
+            coord[0] += 1
+            coord[1] += coord[0] // 5
+            coord[2] += coord[1] // 5
+            coord[0] = coord[0] % 5
+            coord[1] = coord[1] % 5
 
         next_worlds = []
         for block_type, remaining in enumerate(self.blocks):
@@ -64,11 +64,16 @@ class World(object):
                 if new_topo is not None:
                     left_blocks = np.array(self.blocks)
                     left_blocks[block_type] += -1
-                    next_worlds.append(World(left_blocks, new_topo))
+                    next_worlds.append(
+                        World(
+                            left_blocks,
+                            new_topo,
+                            self.search_position + [len(next_worlds)],
+                        )
+                    )
         return next_worlds
 
     def show(self, figsize=4):
-        alpha = 0.9
         axes = [5, 5, 5]
         data = np.zeros(axes, dtype=np.bool)
         colors = np.empty(axes + [4], dtype=np.float32)
@@ -78,7 +83,9 @@ class World(object):
                 for z in range(5):
                     if self.topography[x, y, z]:
                         data[x, y, z] = True
-                        colors[x, y, z] = np.array([0.5, 0.5, 0.5, alpha])
+                        colors[x, y, z] = (
+                            blocks.colors[self.topography[x, y, z] - 1] / 255
+                        )
 
         fig = plt.figure(figsize=(figsize, figsize))
         ax = fig.add_subplot(projection="3d")
