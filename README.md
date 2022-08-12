@@ -13,8 +13,12 @@ This solution was found Friday December 3th 2021, the symetry group of the solut
   <img src="solution/Figure_1.png" alt="Cube solution" title="Longed for solution" width="150"/>
 </p>
 
+To render the solution run
+
+    $ python3 plot_solution.py
+
 
 # Run solver
 To run the solution do
 
-    $ python solve_cube.py
+    $ python3 solve_cube.py
